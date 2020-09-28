@@ -1,9 +1,10 @@
-FROM nvidia/cuda:10.1-devel-ubuntu16.04
+FROM nvidia/cuda:10.1-devel-ubuntu18.04
 
 RUN apt-get update \
     && apt-get install -y \
         build-essential \
         cmake \
+        python3 python3-pip \
         git \
         wget \
         unzip \
@@ -19,8 +20,18 @@ RUN apt-get update \
         libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install numpy
+RUN pip3 install pip --upgrade 
+RUN pip3 install numpy 
 
+# install opencv (python)
+RUN apt-get update && apt-get install -y libgl1-mesa-glx
+RUN pip3 install opencv-python opencv-contrib-python
+
+# install pytorch
+RUN pip3 install torch==1.6.0+cu101 torchvision==0.7.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
+
+
+# install opencv 
 WORKDIR /
 ENV OPENCV_VERSION="4.4.0"
 RUN wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip \
@@ -29,7 +40,7 @@ RUN wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip \
 && cd /opencv-${OPENCV_VERSION}/cmake_binary \
 && cmake -DBUILD_TIFF=ON \
   -DBUILD_opencv_java=OFF \
-  -DWITH_CUDA=ON \
+  -DWITH_CUDA=OFF \
   -DWITH_OPENGL=ON \
   -DWITH_OPENCL=ON \
   -DWITH_IPP=ON \
@@ -39,17 +50,16 @@ RUN wget https://github.com/opencv/opencv/archive/${OPENCV_VERSION}.zip \
   -DBUILD_TESTS=OFF \
   -DBUILD_PERF_TESTS=OFF \
   -DCMAKE_BUILD_TYPE=RELEASE \
-  -DCMAKE_INSTALL_PREFIX=$(python3.7 -c "import sys; print(sys.prefix)") \
-  -DPYTHON_EXECUTABLE=$(which python3.7) \
-  -DPYTHON_INCLUDE_DIR=$(python3.7 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
-  -DPYTHON_PACKAGES_PATH=$(python3.7 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") \
+  -DCMAKE_INSTALL_PREFIX=$(python3 -c "import sys; print(sys.prefix)") \
+  -DPYTHON_EXECUTABLE=$(which python3) \
+  -DPYTHON_INCLUDE_DIR=$(python3 -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") \
+  -DPYTHON_PACKAGES_PATH=$(python3 -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())") \
   .. \
 && make install \
 && rm /${OPENCV_VERSION}.zip \
 && rm -r /opencv-${OPENCV_VERSION}
-RUN ln -s \
-  /usr/local/python/cv2/python-3.7/cv2.cpython-37m-x86_64-linux-gnu.so \
-  /usr/local/lib/python3.7/site-packages/cv2.so
+#RUN ln -s \
+#  /usr/local/python/cv2/python-3.5/cv2.cpython-37m-x86_64-linux-gnu.so \
+#  /usr/local/lib/python3.5/site-packages/cv2.so
 
-RUN pip install torch==1.6.0+cu101 torchvision==0.7.0+cu101 -f https://download.pytorch.org/whl/torch_stable.html
 
